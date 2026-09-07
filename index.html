@@ -1,0 +1,584 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Philippine National Railways - Disbursement Voucher</title>
+    <style>
+        @page {
+            size: A4 portrait;
+            margin: 10mm;
+        }
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        body {
+            font-family: Arial, sans-serif;
+            font-size: 11pt;
+            color: #000;
+            background-color: #f1f5f9;
+        }
+
+        /* Control Panel */
+        .control-panel {
+            max-width: 800px;
+            margin: 20px auto;
+            background: #ffffff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        .control-panel h2 {
+            font-size: 15pt;
+            color: #1e3a8a;
+            margin-bottom: 12px;
+            border-bottom: 2px solid #e2e8f0;
+            padding-bottom: 6px;
+        }
+        .form-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+        .form-group {
+            display: flex;
+            flex-direction: column;
+        }
+        .form-group.full {
+            grid-column: span 2;
+        }
+        .form-group label {
+            font-weight: bold;
+            margin-bottom: 3px;
+            color: #475569;
+            font-size: 10pt;
+        }
+        .form-group input, .form-group select {
+            padding: 6px 10px;
+            border: 1px solid #cbd5e1;
+            border-radius: 4px;
+            font-size: 10pt;
+        }
+        .section-header {
+            grid-column: span 2;
+            font-size: 12pt;
+            font-weight: bold;
+            color: #1e3a8a;
+            margin-top: 10px;
+            border-bottom: 1px dashed #cbd5e1;
+            padding-bottom: 4px;
+        }
+        .btn-row {
+            grid-column: span 2;
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+            margin-top: 10px;
+        }
+        .btn {
+            background-color: #2563eb;
+            color: #fff;
+            border: none;
+            padding: 8px 16px;
+            font-weight: bold;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 10pt;
+        }
+        .btn:hover { background-color: #1d4ed8; }
+        .btn-secondary { background-color: #64748b; }
+        .btn-secondary:hover { background-color: #475569; }
+        .btn-success { background-color: #16a34a; }
+        .btn-success:hover { background-color: #15803d; }
+
+        /* Modal Overlay for Preview */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.6);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+            overflow-y: auto;
+            padding: 20px;
+        }
+        .modal-content {
+            background: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            max-width: 900px;
+            width: 100%;
+            max-height: 95vh;
+            overflow-y: auto;
+            position: relative;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+        }
+        .close-modal {
+            position: absolute;
+            top: 15px;
+            right: 20px;
+            background: #ef4444;
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            font-weight: bold;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 10pt;
+        }
+        .close-modal:hover { background: #dc2626; }
+
+        /* A4 Voucher Wrapper */
+        .voucher-sheet {
+            width: 210mm;
+            min-height: 277mm;
+            margin: 20px auto;
+            background: #ffffff;
+            padding: 0mm;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+            border: 1px solid #cbd5e1;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+
+        .modal-content .voucher-sheet {
+            margin: 0 auto;
+            box-shadow: none;
+            border: 1px solid #cbd5e1;
+        }
+
+        #print-output-container {
+            display: none;
+        }
+
+        /* Voucher Table Grid Layout */
+        table.dv-table {
+            width: 100%;
+            border-collapse: collapse;
+            border: 2px solid #000;
+            table-layout: fixed;
+        }
+        table.dv-table th, table.dv-table td {
+            border: 1px solid #000;
+            padding: 3px 5px;
+            vertical-align: top;
+            overflow: hidden;
+            word-wrap: break-word;
+            font-size: 11pt;
+        }
+        .center { text-align: center; }
+        .right { text-align: right; }
+        .bold { font-weight: bold; }
+
+        .checkbox {
+            display: inline-block;
+            width: 11px;
+            height: 11px;
+            border: 1px solid #000;
+            text-align: center;
+            line-height: 9px;
+            font-size: 9pt;
+            margin-right: 2px;
+        }
+        .subtable {
+            width: 100%;
+            border-collapse: collapse;
+            border: none;
+        }
+        .subtable td {
+            border: none;
+            padding: 2px 3px;
+            font-size: 11pt;
+        }
+
+        @media print {
+            body * {
+                visibility: hidden !important;
+            }
+            .control-panel, .modal-overlay {
+                display: none !important;
+            }
+            #print-output-container, #print-output-container * {
+                visibility: visible !important;
+            }
+            #print-output-container {
+                display: block !important;
+                position: absolute;
+                left: 0;
+                top: 0;
+                width: 100%;
+            }
+            body {
+                background: #fff !important;
+                margin: 0 !important;
+            }
+            .voucher-sheet {
+                margin: 0 !important;
+                box-shadow: none !important;
+                border: none !important;
+                width: 100% !important;
+                min-height: auto !important;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Control Panel for Live Editing -->
+    <div class="control-panel">
+        <h2>PNR Disbursement Voucher Form Generator</h2>
+        <div class="form-grid">
+            <div class="form-group">
+                <label>Fund Cluster:</label>
+                <input type="text" id="inp-fund" placeholder="e.g. COB 2026">
+            </div>
+            <div class="form-group">
+                <label>Date:</label>
+                <input type="date" id="inp-date">
+            </div>
+            <div class="form-group">
+                <label>DV Number:</label>
+                <input type="text" id="inp-dv" placeholder="e.g. C-2026-04-0001">
+            </div>
+            <div class="form-group">
+                <label>Mode of Payment:</label>
+                <select id="inp-mode">
+                    <option value="mds">MDS Check</option>
+                    <option value="commercial">Commercial Check</option>
+                    <option value="ada" selected>ADA</option>
+                    <option value="others">Others</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Payee Name:</label>
+                <input type="text" id="inp-payee" placeholder="Enter payee name">
+            </div>
+            <div class="form-group">
+                <label>TIN / Employee No.:</label>
+                <input type="text" id="inp-tin" placeholder="Enter TIN or ID">
+            </div>
+            <div class="form-group full">
+                <label>Particulars:</label>
+                <input type="text" id="inp-particulars" placeholder="Enter particulars description">
+            </div>
+            <div class="form-group">
+                <label>Responsibility Center:</label>
+                <input type="text" id="inp-resp" placeholder="Enter code">
+            </div>
+            <div class="form-group">
+                <label>Amount (₱):</label>
+                <input type="number" id="inp-amount" value="" step="0.01" placeholder="0.00">
+            </div>
+
+            <!-- Signatories & Approvals Section -->
+            <div class="section-header">Signatories & Approvals</div>
+            <div class="form-group">
+                <label>Box A - Certified By (Name):</label>
+                <input type="text" id="inp-boxa-name" placeholder="Enter name">
+            </div>
+            <div class="form-group">
+                <label>Box A - Position:</label>
+                <input type="text" id="inp-boxa-pos" placeholder="Enter position">
+            </div>
+            <div class="form-group">
+                <label>Box D - Approved By (Name):</label>
+                <input type="text" id="inp-boxd-name" placeholder="Enter name">
+            </div>
+            <div class="form-group">
+                <label>Box D - Position/Authority:</label>
+                <input type="text" id="inp-boxd-pos" placeholder="Enter position/authority">
+            </div>
+
+            <div class="btn-row">
+                <button class="btn btn-secondary" type="button" onclick="clearForm()">Clear Form</button>
+                <button class="btn btn-success" type="button" onclick="openPreviewModal()">Preview Form</button>
+                <button class="btn" type="button" onclick="triggerPrint()">Print / Export PDF</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Preview Window -->
+    <div class="modal-overlay" id="previewModal">
+        <div class="modal-content">
+            <button class="close-modal" type="button" onclick="closePreviewModal()">Close X</button>
+            <h3 style="margin-bottom: 15px; color: #1e3a8a;">Disbursement Voucher Preview</h3>
+            <div class="voucher-sheet" id="modal-voucher-container"></div>
+        </div>
+    </div>
+
+    <!-- Dedicated Print Container -->
+    <div id="print-output-container">
+        <div class="voucher-sheet" id="print-voucher-container"></div>
+    </div>
+
+    <!-- Master Template Layout Structure -->
+    <div id="master-voucher-template" style="display:none;">
+        <table class="dv-table">
+            <colgroup>
+                <col style="width: 10%;">
+                <col style="width: 25%;">
+                <col style="width: 15%;">
+                <col style="width: 15%;">
+                <col style="width: 15%;">
+                <col style="width: 20%;">
+            </colgroup>
+            
+            <tr>
+                <td colspan="5" class="center" style="font-size: 10pt; padding-top: 6px; vertical-align: middle;">
+                    Republic of the Philippines<br>
+                    <span style="font-size: 12pt; font-weight: bold; letter-spacing: 0.5px;">PHILIPPINE NATIONAL RAILWAYS</span>
+                </td>
+                <td style="font-size: 10pt;"><strong>Fund Cluster :</strong> <span class="out-fund"></span></td>
+            </tr>
+            <tr>
+                <td colspan="5" rowspan="3" class="center bold" style="font-size: 13pt; vertical-align: middle;">
+                    DISBURSEMENT VOUCHER
+                </td>
+                <td style="font-size: 10pt;"><strong>Date :</strong> <span class="out-date"></span></td>
+            </tr>
+            <tr>
+                <td style="font-size: 10pt;"><strong>DV No. :</strong> <span class="out-dv"></span></td>
+            </tr>
+            <tr>
+                <td></td>
+            </tr>
+
+            <tr>
+                <td colspan="6">
+                    <table class="subtable">
+                        <tr>
+                            <td style="width: 16%; font-weight: bold; font-size: 10pt;">Mode of Payment</td>
+                            <td style="width: 18%; font-size: 10pt;"><span class="checkbox chk-mds"></span> MDS Check</td>
+                            <td style="width: 22%; font-size: 10pt;"><span class="checkbox chk-commercial"></span> Commercial Check</td>
+                            <td style="width: 16%; font-size: 10pt;"><span class="checkbox chk-ada"></span> ADA</td>
+                            <td style="width: 28%; font-size: 10pt;"><span class="checkbox chk-others"></span> Others</td>
+                        </tr>
+                    </table>
+                </td>
+            </tr>
+
+            <tr>
+                <td colspan="4" style="font-size: 10pt;"><strong>Payee:</strong> <span class="out-payee"></span></td>
+                <td style="font-size: 10pt;"><strong>TIN:</strong> <span class="out-tin"></span></td>
+                <td style="font-size: 10pt;"><strong>ORS/BURS No.:</strong></td>
+            </tr>
+            <tr>
+                <td colspan="6" style="font-size: 10pt;"><strong>Address:</strong> Manila, Philippines</td>
+            </tr>
+
+            <tr class="center bold" style="background-color: #f8fafc; font-size: 10pt;">
+                <td colspan="3">Particulars</td>
+                <td style="font-size: 10pt;">Responsibility Center</td>
+                <td>MFO/PAP</td>
+                <td>Amount</td>
+            </tr>
+            <tr>
+                <td colspan="3" style="vertical-align: top; font-size: 11pt;"><span class="out-particulars"></span></td>
+                <td class="center" style="vertical-align: middle; font-size: 10pt;"><span class="out-resp"></span></td>
+                <td class="center" style="vertical-align: middle; font-size: 11pt;"></td>
+                <td class="right" style="vertical-align: middle; font-weight: bold; font-size: 11pt;">₱ <span class="out-amount"></span></td>
+            </tr>
+            <tr><td colspan="3" style="height: 18px;"></td><td></td><td></td><td></td></tr>
+            <tr><td colspan="3" style="height: 18px;"></td><td></td><td></td><td></td></tr>
+            <tr><td colspan="3" style="height: 18px;"></td><td></td><td></td><td></td></tr>
+            <tr><td colspan="3" style="height: 18px;"></td><td></td><td></td><td></td></tr>
+            <tr><td colspan="3" style="height: 18px;"></td><td></td><td></td><td></td></tr>
+            <tr><td colspan="3" style="height: 18px;"></td><td></td><td></td><td></td></tr>
+            <tr><td colspan="3" style="height: 18px;"></td><td></td><td></td><td></td></tr>
+            <tr><td colspan="3" style="height: 18px;"></td><td></td><td></td><td></td></tr>
+            <tr><td colspan="3" style="height: 18px;"></td><td></td><td></td><td></td></tr>
+
+            <tr>
+                <td colspan="5" class="right bold" style="padding-right: 12px; font-size: 10pt;">Amount Due</td>
+                <td class="right bold" style="background-color: #f8fafc; font-size: 11pt;">₱ <span class="out-amount-due"></span></td>
+            </tr>
+
+            <tr>
+                <td colspan="6" style="font-size: 10pt;">
+                    <strong>A.</strong> Certified: Expenses/Cash Advance necessary, lawful and incurred under my direct supervision.
+                </td>
+            </tr>
+            <tr>
+                <td colspan="6" style="padding-bottom: 6px;">
+                    <table class="subtable" style="width: 100%;">
+                        <tr><td style="width: 15%; font-size: 10pt;">Signature</td><td style="border-bottom: 1px solid #000; width: 85%;"></td></tr>
+                        <tr><td style="font-size: 10pt;">Printed Name</td><td class="bold" style="font-size: 11pt;"><span class="out-boxa-name"></span></td></tr>
+                        <tr><td style="font-size: 10pt;">Position</td><td style="font-size: 11pt;"><span class="out-boxa-pos"></span></td></tr>
+                    </table>
+                </td>
+            </tr>
+
+            <tr>
+                <td colspan="6" style="font-size: 10pt;"><strong>B.</strong> Accounting Entry:</td>
+            </tr>
+            <tr class="center bold" style="background-color: #f8fafc; font-size: 10pt;">
+                <td colspan="3">Account Title</td>
+                <td>UACS Code</td>
+                <td>Debit</td>
+                <td>Credit</td>
+            </tr>
+            <tr><td colspan="3" style="height: 18px;"></td><td></td><td></td><td></td></tr>
+            <tr><td colspan="3" style="height: 18px;"></td><td></td><td></td><td></td></tr>
+            <tr><td colspan="3" style="height: 18px;"></td><td></td><td></td><td></td></tr>
+            <tr><td colspan="3" style="height: 18px;"></td><td></td><td></td><td></td></tr>
+            <tr><td colspan="3" style="height: 18px;"></td><td></td><td></td><td></td></tr>
+            <tr><td colspan="3" style="height: 18px;"></td><td></td><td></td><td></td></tr>
+            <tr><td colspan="3" style="height: 18px;"></td><td></td><td></td><td></td></tr>
+            <tr><td colspan="3" style="height: 18px;"></td><td></td><td></td><td></td></tr>
+            <tr><td colspan="3" style="height: 18px;"></td><td></td><td></td><td></td></tr>
+            <tr><td colspan="3" style="height: 18px;"></td><td></td><td></td><td></td></tr>
+
+            <tr>
+                <td colspan="3" style="width: 50%; vertical-align: top; font-size: 10pt;">
+                    <strong>C. Certified:</strong><br>
+                    <div style="margin-top: 2px;"><span class="checkbox"></span> Cash available</div>
+                    <div style="margin-top: 2px;"><span class="checkbox">X</span> Subject to Authority to Debit Account</div>
+                    <div style="margin-top: 2px;"><span class="checkbox"></span> Supporting documents complete</div>
+                </td>
+                <td colspan="3" style="width: 50%; vertical-align: top; font-size: 10pt;">
+                    <strong>D. Approved for Payment</strong><br>
+                    <div class="center" style="margin-top: 4px; font-weight: bold; font-size: 11pt;"><span class="out-words"></span></div>
+                </td>
+            </tr>
+            <tr>
+                <td colspan="3" style="padding-bottom: 4px;">
+                    <table class="subtable" style="width: 100%;">
+                        <tr><td style="width: 20%; font-size: 10pt;">Signature</td><td style="border-bottom: 1px solid #000;"></td></tr>
+                        <tr><td style="font-size: 10pt;">Printed Name</td><td class="bold" style="font-size: 11pt;">JUN DELA CRUZ</td></tr>
+                        <tr><td style="font-size: 10pt;">Position</td><td style="font-size: 10pt;">Head, Accounting Unit/Authorized Representative</td></tr>
+                    </table>
+                </td>
+                <td colspan="3" style="padding-bottom: 4px;">
+                    <table class="subtable" style="width: 100%;">
+                        <tr><td style="width: 20%; font-size: 10pt;">Signature</td><td style="border-bottom: 1px solid #000;"></td></tr>
+                        <tr><td style="font-size: 10pt;">Printed Name</td><td class="bold" style="font-size: 11pt;"><span class="out-boxd-name"></span></td></tr>
+                        <tr><td style="font-size: 10pt;">Position</td><td style="font-size: 10pt;"><span class="out-boxd-pos"></span></td></tr>
+                    </table>
+                </td>
+            </tr>
+
+            <tr>
+                <td colspan="6" style="background-color: #f8fafc; font-size: 10pt;"><strong>E. Receipt of Payment</strong></td>
+            </tr>
+            <tr>
+                <td colspan="2" style="font-size: 10pt;">Check/ADA No. :<br>Signature :</td>
+                <td colspan="2" style="font-size: 10pt;">Date :<br>Date :</td>
+                <td colspan="2" style="font-size: 10pt;">Bank Name & Account Number:<br>Printed Name :</td>
+            </tr>
+        </table>
+    </div>
+
+    <script>
+        function numberToWords(num) {
+            if (isNaN(num) || num <= 0) return "Zero Pesos Only";
+            let parts = num.toFixed(2).split(".");
+            let intPart = parseInt(parts[0]);
+            let decPart = parseInt(parts[1]);
+            const units = ["", "One", "Two", "Three", "Four", "Five", "Six", "Seven", "Eight", "Nine", "Ten", "Eleven", "Twelve", "Thirteen", "Fourteen", "Fifteen", "Sixteen", "Seventeen", "Eighteen", "Nineteen"];
+            const tens = ["", "", "Twenty", "Thirty", "Forty", "Fifty", "Sixty", "Seventy", "Eighty", "Ninety"];
+            
+            function convert(n) {
+                if (n === 0) return "";
+                if (n < 20) return units[n] + " ";
+                if (n < 100) return tens[Math.floor(n / 10)] + " " + convert(n % 10);
+                if (n < 1000) return units[Math.floor(n / 100)] + " Hundred " + convert(n % 100);
+                if (n < 1000000) return convert(Math.floor(n / 1000)) + " Thousand " + convert(n % 1000);
+                return convert(Math.floor(n / 1000000)) + " Million " + convert(n % 1000000);
+            }
+            let res = convert(intPart).trim() + " Pesos";
+            if (decPart > 0) res += " and " + decPart + "/100";
+            return res + " Only";
+        }
+
+        function updateFormValues() {
+            let fund = document.getElementById('inp-fund').value;
+            let dVal = document.getElementById('inp-date').value;
+            let d = new Date(dVal);
+            let formattedDate = isNaN(d) ? '' : d.toLocaleDateString();
+            let dvNo = document.getElementById('inp-dv').value;
+            let payee = document.getElementById('inp-payee').value;
+            let tin = document.getElementById('inp-tin').value;
+            let particulars = document.getElementById('inp-particulars').value;
+            let resp = document.getElementById('inp-resp').value;
+            
+            let amt = parseFloat(document.getElementById('inp-amount').value) || 0;
+            let formattedAmt = amt > 0 ? amt.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2}) : '';
+            let words = amt > 0 ? numberToWords(amt) : '';
+            let mode = document.getElementById('inp-mode').value;
+
+            let boxAName = document.getElementById('inp-boxa-name').value;
+            let boxAPos = document.getElementById('inp-boxa-pos').value;
+            let boxDName = document.getElementById('inp-boxd-name').value;
+            let boxDPos = document.getElementById('inp-boxd-pos').value;
+
+            document.querySelectorAll('.out-fund').forEach(el => el.innerText = fund);
+            document.querySelectorAll('.out-date').forEach(el => el.innerText = formattedDate);
+            document.querySelectorAll('.out-dv').forEach(el => el.innerText = dvNo);
+            document.querySelectorAll('.out-payee').forEach(el => el.innerText = payee);
+            document.querySelectorAll('.out-tin').forEach(el => el.innerText = tin);
+            document.querySelectorAll('.out-particulars').forEach(el => el.innerText = particulars);
+            document.querySelectorAll('.out-resp').forEach(el => el.innerText = resp);
+            document.querySelectorAll('.out-amount').forEach(el => el.innerText = formattedAmt);
+            document.querySelectorAll('.out-amount-due').forEach(el => el.innerText = formattedAmt);
+            document.querySelectorAll('.out-words').forEach(el => el.innerText = words);
+
+            document.querySelectorAll('.out-boxa-name').forEach(el => el.innerText = boxAName);
+            document.querySelectorAll('.out-boxa-pos').forEach(el => el.innerText = boxAPos);
+            document.querySelectorAll('.out-boxd-name').forEach(el => el.innerText = boxDName);
+            document.querySelectorAll('.out-boxd-pos').forEach(el => el.innerText = boxDName ? boxDPos : '');
+
+            document.querySelectorAll('.chk-mds').forEach(el => el.innerText = mode === 'mds' ? 'X' : '');
+            document.querySelectorAll('.chk-commercial').forEach(el => el.innerText = mode === 'commercial' ? 'X' : '');
+            document.querySelectorAll('.chk-ada').forEach(el => el.innerText = mode === 'ada' ? 'X' : '');
+            document.querySelectorAll('.chk-others').forEach(el => el.innerText = mode === 'others' ? 'X' : '');
+
+            document.getElementById('print-output-container').innerHTML = document.getElementById('master-voucher-template').innerHTML;
+        }
+
+        function openPreviewModal() {
+            updateFormValues();
+            document.getElementById('modal-voucher-container').innerHTML = document.getElementById('master-voucher-template').innerHTML;
+            document.getElementById('previewModal').style.display = 'flex';
+        }
+
+        function closePreviewModal() {
+            document.getElementById('previewModal').style.display = 'none';
+        }
+
+        function clearForm() {
+            document.getElementById('inp-fund').value = '';
+            document.getElementById('inp-date').value = '';
+            document.getElementById('inp-dv').value = '';
+            document.getElementById('inp-mode').value = 'ada';
+            document.getElementById('inp-payee').value = '';
+            document.getElementById('inp-tin').value = '';
+            document.getElementById('inp-particulars').value = '';
+            document.getElementById('inp-resp').value = '';
+            document.getElementById('inp-amount').value = '';
+            document.getElementById('inp-boxa-name').value = '';
+            document.getElementById('inp-boxa-pos').value = '';
+            document.getElementById('inp-boxd-name').value = '';
+            document.getElementById('inp-boxd-pos').value = '';
+            updateFormValues();
+        }
+
+        function triggerPrint() {
+            updateFormValues();
+            window.print();
+        }
+
+        document.querySelectorAll('.control-panel input, .control-panel select').forEach(el => {
+            el.addEventListener('input', updateFormValues);
+            el.addEventListener('change', updateFormValues);
+        });
+
+        updateFormValues();
+    </script>
+</body>
+</html>
